@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>MQTT Dashboard</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .card { border: 1px solid #ccc; padding: 20px; border-radius: 10px; max-width: 400px; margin: auto; }
+    h2 { text-align: center; }
+    .output { font-size: 2em; text-align: center; margin: 20px 0; }
+    .btn { padding: 10px 20px; font-size: 1em; margin: 10px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>MQTT Dashboard</h2>
+    <div>Jarak Ultrasonik:</div>
+    <div class="output" id="jarak">-- cm</div>
+    <div style="text-align: center;">
+      <button class="btn" onclick="kirimPerintah('ON')">Nyalakan LED</button>
+      <button class="btn" onclick="kirimPerintah('OFF')">Matikan LED</button>
+    </div>
+  </div>
+
+  <script>
+    const broker = "wss://broker.emqx.io:8884/mqtt"; // Ubah jika pakai broker lain
+    const topicSub = "poliban/sensor/ultrasonik";
+    const topicPub = "poliban/control/led";
+
+    const client = mqtt.connect(broker);
+
+    client.on('connect', () => {
+      console.log("Terhubung ke broker MQTT");
+      client.subscribe(topicSub, err => {
+        if (err) console.error("Gagal subscribe:", err);
+      });
+    });
+
+    client.on('message', (topic, message) => {
+      if (topic === topicSub) {
+        try {
+          const data = JSON.parse(message.toString());
+          document.getElementById("jarak").textContent = `${data.jarak.toFixed(2)} cm`;
+        } catch (e) {
+          console.error("Format data salah:", e);
+        }
+      }
+    });
+
+    function kirimPerintah(nilai) {
+      client.publish(topicPub, nilai);
+    }
+  </script>
+</body>
+</html>
