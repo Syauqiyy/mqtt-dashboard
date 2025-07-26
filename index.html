@@ -24,7 +24,11 @@
   </div>
 
   <script>
-    const broker = "wss://broker.emqx.io:8884/mqtt"; // Ubah jika pakai broker lain
+    // const broker = "wss://broker.emqx.io:8884/mqtt"; // Ubah jika pakai broker lain
+    const broker = location.protocol === "https:" 
+      ? "wss://broker.emqx.io:8084/mqtt" 
+      : "ws://broker.emqx.io:8083/mqtt";
+
     const topicSub = "poliban/sensor/ultrasonik";
     const topicPub = "poliban/led/kontrol";
 
