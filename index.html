@@ -69,6 +69,16 @@
       <button class="btn" onclick="kirimPerintah('ON')">Nyalakan LED</button>
       <button class="btn" onclick="kirimPerintah('OFF')">Matikan LED</button>
     </div>
+
+    <!-- 🔌 Kontrol LED Tambahan -->
+    <div style="text-align: center;">
+      <h3>LED Tambahan</h3>
+      <button class="btn" onclick="kirimLEDGroup('LED1_ON')">LED 1 ON</button>
+      <button class="btn" onclick="kirimLEDGroup('LED1_OFF')">LED 1 OFF</button>
+      <br />
+      <button class="btn" onclick="kirimLEDGroup('LED2_ON')">LED 2 ON</button>
+      <button class="btn" onclick="kirimLEDGroup('LED2_OFF')">LED 2 OFF</button>
+    </div>
   </div>
 
   <script>
@@ -116,6 +126,10 @@
 
     function kirimPerintah(nilai) {
       client.publish(topicPub, nilai);
+    }
+    // ✅ Tambahkan ini:
+    function kirimLEDGroup(perintah) {
+      client.publish("esp32/led/group", perintah);
     }
   </script>
 </body>
