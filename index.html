@@ -4,72 +4,67 @@
   <meta charset="utf-8" />
   <title>MQTT Dashboard</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<!--   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .card { border: 1px solid #ccc; padding: 20px; border-radius: 10px; max-width: 400px; margin: auto; }
-    h2 { text-align: center; }
-    .output { font-size: 2em; text-align: center; margin: 20px 0; }
-    .btn { padding: 10px 20px; font-size: 1em; margin: 10px; }
-  </style> -->
 
   <style>
-  body {
-    font-family: sans-serif;
-    padding: 20px;
-    background-image: url('https://github.com/Syauqiyy/mqtt-dashboard/blob/main/sawitbot.png?raw=true');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-  }
-/*   .card {
-    border: 1px solid #ccc;
-    padding: 20px;
-    border-radius: 10px;
-    max-width: 400px;
-    margin: auto;
-    background-color: white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  } */
-    .card {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid #ccc;
-    padding: 20px;
-    border-radius: 10px;
-    max-width: 400px;
-    margin: auto;
-  }
-  h2 {
-    text-align: center;
-  }
-  .output {
-    font-size: 2em;
-    text-align: center;
-    margin: 20px 0;
-    color: #333;
-  }
-  .btn {
-    padding: 10px 20px;
-    font-size: 1em;
-    margin: 10px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    color: white;
-    background-color: #007bff;
-    transition: background-color 0.3s;
-  }
-  .btn:hover {
-    background-color: #0056b3;
-  }
-</style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background-image: url('https://github.com/Syauqiyy/mqtt-dashboard/blob/main/sawitbot.png?raw=true');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
 
-  
+    .card {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid #ccc;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 400px;
+      margin: auto;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    .output {
+      font-size: 2em;
+      text-align: center;
+      margin: 20px 0;
+      color: #333;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      font-size: 1em;
+      margin: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: white;
+      background-color: #007bff;
+      transition: background-color 0.3s;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
 <body>
   <div class="card">
     <h2>MQTT Dashboard SYAU</h2>
+
+    <!-- 📏 Sensor Ultrasonik -->
     <div>Jarak Ultrasonik:</div>
     <div class="output" id="jarak">-- cm</div>
+
+    <!-- ⚖️ Load Cell -->
+    <div>Berat Load Cell:</div>
+    <div class="output" id="berat">-- g</div>
+
+    <!-- 💡 Kontrol LED -->
     <div style="text-align: center;">
       <button class="btn" onclick="kirimPerintah('ON')">Nyalakan LED</button>
       <button class="btn" onclick="kirimPerintah('OFF')">Matikan LED</button>
@@ -77,20 +72,26 @@
   </div>
 
   <script>
-    // const broker = "wss://broker.emqx.io:8884/mqtt"; // Ubah jika pakai broker lain
     const broker = location.protocol === "https:" 
       ? "wss://broker.emqx.io:8084/mqtt" 
       : "ws://broker.emqx.io:8083/mqtt";
 
     const topicSub = "poliban/sensor/ultrasonik";
+    const topicLoadCell = "poliban/sensor/loadcell";  // Tambahan loadcell
     const topicPub = "poliban/led/kontrol";
 
     const client = mqtt.connect(broker);
 
     client.on('connect', () => {
-      console.log("Terhubung ke broker MQTT");
+      console.log("✅ Terhubung ke broker MQTT");
+
+      // Subscribe ke dua topik
       client.subscribe(topicSub, err => {
-        if (err) console.error("Gagal subscribe:", err);
+        if (err) console.error("Gagal subscribe (ultrasonik):", err);
+      });
+
+      client.subscribe(topicLoadCell, err => {
+        if (err) console.error("Gagal subscribe (loadcell):", err);
       });
     });
 
@@ -100,7 +101,15 @@
           const data = JSON.parse(message.toString());
           document.getElementById("jarak").textContent = `${data.jarak.toFixed(2)} cm`;
         } catch (e) {
-          console.error("Format data salah:", e);
+          console.error("Format data salah (ultrasonik):", e);
+        }
+      }
+      else if (topic === topicLoadCell) {
+        try {
+          const data = JSON.parse(message.toString());
+          document.getElementById("berat").textContent = `${data.berat} g`;
+        } catch (e) {
+          console.error("Format data salah (loadcell):", e);
         }
       }
     });
