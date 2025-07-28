@@ -71,13 +71,21 @@
     </div>
 
     <!-- 🔌 Kontrol LED Tambahan -->
-    <div style="text-align: center;">
+<!--     <div style="text-align: center;">
       <h3>LED Tambahan</h3>
       <button class="btn" onclick="kirimLEDGroup('LED1_ON')">LED 1 ON</button>
       <button class="btn" onclick="kirimLEDGroup('LED1_OFF')">LED 1 OFF</button>
       <br />
       <button class="btn" onclick="kirimLEDGroup('LED2_ON')">LED 2 ON</button>
       <button class="btn" onclick="kirimLEDGroup('LED2_OFF')">LED 2 OFF</button>
+    </div>
+ -->
+    
+        <!-- 🔌 Kontrol LED Tambahan -->
+    <div style="text-align: center;">
+      <h3>LED Tambahan (Toggle)</h3>
+      <button class="btn" id="led1Btn" onclick="toggleLED('LED1')">LED 1 OFF</button>
+      <button class="btn" id="led2Btn" onclick="toggleLED('LED2')">LED 2 OFF</button>
     </div>
   </div>
 
@@ -128,8 +136,39 @@
       client.publish(topicPub, nilai);
     }
     // ✅ Tambahkan ini:
-    function kirimLEDGroup(perintah) {
-      client.publish("esp32/led/group", perintah);
+    // function kirimLEDGroup(perintah) {
+    //   client.publish("esp32/led/group", perintah);
+    // }
+    <script>
+  
+  
+    function kirimPerintah(nilai) {
+      client.publish(topicPub, nilai);
+    }
+  
+    // 🔄 Status LED lokal
+    let ledStates = {
+      LED1: false,
+      LED2: false
+    };
+  
+    function toggleLED(led) {
+      // Toggle status
+      ledStates[led] = !ledStates[led];
+      const status = ledStates[led] ? "ON" : "OFF";
+  
+      // Buat pesan JSON
+      const payload = JSON.stringify({
+        led: led,
+        status: status
+      });
+  
+      // Kirim ke topik group
+      client.publish("esp32/led/group", payload);
+  
+      // Ubah teks tombol
+      const btn = document.getElementById(led.toLowerCase() + "Btn");
+      btn.textContent = `${led} ${status}`;
     }
   </script>
 </body>
