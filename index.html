@@ -1,15 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard SawitBot</title>
+  <meta charset="utf-8" />
+  <title>MQTT Dashboard</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
   <style>
     body {
       font-family: sans-serif;
       margin: 0;
       padding: 0;
       height: 100vh;
+      width: 100vw;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -20,44 +22,133 @@
     }
 
     .card {
-      background-color: rgba(255, 255, 255, 0.85);
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid #ccc;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    h2 {
       text-align: center;
-      min-width: 300px;
     }
 
-    .card h1 {
-      margin-top: 0;
-      font-size: 24px;
+    .output {
+      font-size: 2em;
+      text-align: center;
+      margin: 20px 0;
+      color: #333;
     }
 
-    .card p {
-      font-size: 16px;
-    }
-
-    .button {
+    .btn {
       padding: 10px 20px;
-      background-color: #2e7d32;
-      color: white;
+      font-size: 1em;
+      margin: 10px;
       border: none;
-      border-radius: 8px;
+      border-radius: 5px;
       cursor: pointer;
-      font-size: 16px;
-      margin-top: 15px;
+      color: white;
+      background-color: #007bff;
+      transition: background-color 0.3s;
     }
 
-    .button:hover {
-      background-color: #1b5e20;
+    .btn:hover {
+      background-color: #0056b3;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Selamat Datang di Dashboard SawitBot</h1>
-    <p>Kontrol dan pantau robot sawit Anda di sini.</p>
-    <button class="button">Mulai Kontrol</button>
+    <h2>Dashboard SAWITBOT KAYUBI</h2>
+
+    <!-- 📏 Sensor Ultrasonik -->
+    <div>Jarak Ultrasonik:</div>
+    <div class="output" id="jarak">-- cm</div>
+
+    <!-- ⚖️ Load Cell -->
+    <div>Berat Bak Berondolan:</div>
+    <div class="output" id="berat">-- g</div>
+
+    <!-- 💡 Kontrol LED -->
+    <div style="text-align: center;">
+      <button class="btn" onclick="kirimPerintah('ON')">Nyalakan LED</button>
+      <button class="btn" onclick="kirimPerintah('OFF')">Matikan LED</button>
+    </div>
+
+    <!-- 🔌 Kontrol LED Tambahan -->
+    <div style="text-align: center;">
+      <h3>KONTROL LED (Toggle)</h3>
+      <button class="btn" id="led1Btn" onclick="toggleLED('LED1')">LED 1 OFF</button>
+      <button class="btn" id="led2Btn" onclick="toggleLED('LED2')">LED 2 OFF</button>
+    </div>
   </div>
+
+  <script>
+    const broker = location.protocol === "https:" 
+      ? "wss://broker.emqx.io:8084/mqtt" 
+      : "ws://broker.emqx.io:8083/mqtt";
+
+    const topicSub = "poliban/sensor/ultrasonik";
+    const topicLoadCell = "poliban/sensor/loadcell";
+    const topicPub = "poliban/led/kontrol";
+
+    const client = mqtt.connect(broker);
+
+    client.on('connect', () => {
+      console.log("✅ Terhubung ke broker MQTT");
+
+      client.subscribe(topicSub, err => {
+        if (err) console.error("Gagal subscribe (ultrasonik):", err);
+      });
+
+      client.subscribe(topicLoadCell, err => {
+        if (err) console.error("Gagal subscribe (loadcell):", err);
+      });
+    });
+
+    client.on('message', (topic, message) => {
+      if (topic === topicSub) {
+        try {
+          const data = JSON.parse(message.toString());
+          document.getElementById("jarak").textContent = `${data.jarak.toFixed(2)} cm`;
+        } catch (e) {
+          console.error("Format data salah (ultrasonik):", e);
+        }
+      }
+      else if (topic === topicLoadCell) {
+        try {
+          const data = JSON.parse(message.toString());
+          document.getElementById("berat").textContent = `${data.berat} g`;
+        } catch (e) {
+          console.error("Format data salah (loadcell):", e);
+        }
+      }
+    });
+
+    function kirimPerintah(nilai) {
+      client.publish(topicPub, nilai);
+    }
+
+    let ledStates = {
+      LED1: false,
+      LED2: false
+    };
+
+    function toggleLED(led) {
+      ledStates[led] = !ledStates[led];
+      const status = ledStates[led] ? "ON" : "OFF";
+
+      const payload = JSON.stringify({
+        led: led,
+        status: status
+      });
+
+      client.publish("esp32/led/group", payload);
+
+      const btn = document.getElementById(led.toLowerCase() + "Btn");
+      btn.textContent = `${led} ${status}`;
+    }
+  </script>
 </body>
 </html>
