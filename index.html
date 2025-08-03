@@ -49,12 +49,23 @@
       border-radius: 5px;
       cursor: pointer;
       color: white;
-      background-color: #007bff;
       transition: background-color 0.3s;
     }
 
-    .btn:hover {
+    .btn-on {
+      background-color: #007bff; /* Biru saat ON */
+    }
+
+    .btn-on:hover {
       background-color: #0056b3;
+    }
+
+    .btn-off {
+      background-color: #dc3545; /* Merah saat OFF */
+    }
+
+    .btn-off:hover {
+      background-color: #a71d2a;
     }
   </style>
 </head>
@@ -72,15 +83,15 @@
 
     <!-- 💡 Kontrol LED -->
     <div style="text-align: center;">
-      <button class="btn" onclick="kirimPerintah('ON')">Nyalakan LED</button>
-      <button class="btn" onclick="kirimPerintah('OFF')">Matikan LED</button>
+      <button class="btn btn-on" onclick="kirimPerintah('ON')">Nyalakan LED</button>
+      <button class="btn btn-off" onclick="kirimPerintah('OFF')">Matikan LED</button>
     </div>
 
     <!-- 🔌 Kontrol LED Tambahan -->
     <div style="text-align: center;">
       <h3>KONTROL LED (Toggle)</h3>
-      <button class="btn" id="led1Btn" onclick="toggleLED('LED1')">LED 1 OFF</button>
-      <button class="btn" id="led2Btn" onclick="toggleLED('LED2')">LED 2 OFF</button>
+      <button class="btn btn-off" id="led1Btn" onclick="toggleLED('LED1')">LED 1 OFF</button>
+      <button class="btn btn-off" id="led2Btn" onclick="toggleLED('LED2')">LED 2 OFF</button>
     </div>
   </div>
 
@@ -98,13 +109,8 @@
     client.on('connect', () => {
       console.log("✅ Terhubung ke broker MQTT");
 
-      client.subscribe(topicSub, err => {
-        if (err) console.error("Gagal subscribe (ultrasonik):", err);
-      });
-
-      client.subscribe(topicLoadCell, err => {
-        if (err) console.error("Gagal subscribe (loadcell):", err);
-      });
+      client.subscribe(topicSub);
+      client.subscribe(topicLoadCell);
     });
 
     client.on('message', (topic, message) => {
@@ -139,15 +145,15 @@
       ledStates[led] = !ledStates[led];
       const status = ledStates[led] ? "ON" : "OFF";
 
-      const payload = JSON.stringify({
-        led: led,
-        status: status
-      });
-
+      const payload = JSON.stringify({ led, status });
       client.publish("esp32/led/group", payload);
 
       const btn = document.getElementById(led.toLowerCase() + "Btn");
       btn.textContent = `${led} ${status}`;
+      
+      // Ganti warna tombol sesuai status
+      btn.classList.remove('btn-on', 'btn-off');
+      btn.classList.add(status === "ON" ? 'btn-on' : 'btn-off');
     }
   </script>
 </body>
