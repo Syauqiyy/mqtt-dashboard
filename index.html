@@ -81,6 +81,11 @@
     <div>Berat Bak Berondolan:</div>
     <div class="output" id="berat">-- g</div>
 
+    <!-- ⚡ Sensor Arus -->
+    <div>Arus Motor:</div>
+    <div class="output" id="arus">-- A</div>
+
+
     <!-- 💡 Kontrol LED -->
     <div style="text-align: center;">
       <button class="btn btn-on" onclick="kirimPerintah('ON')">Nyalakan LED</button>
@@ -102,6 +107,7 @@
 
     const topicSub = "poliban/sensor/ultrasonik";
     const topicLoadCell = "poliban/sensor/loadcell";
+    const topicArus = "poliban/sensor/arus";
     const topicPub = "poliban/led/kontrol";
 
     const client = mqtt.connect(broker);
@@ -111,6 +117,8 @@
 
       client.subscribe(topicSub);
       client.subscribe(topicLoadCell);
+      client.subscribe(topicArus);
+
     });
 
     client.on('message', (topic, message) => {
@@ -130,6 +138,15 @@
           console.error("Format data salah (loadcell):", e);
         }
       }
+      else if (topic === topicArus) {
+        try {
+          const data = JSON.parse(message.toString());
+          document.getElementById("arus").textContent = `${data.arus.toFixed(3)} A`;
+        } catch (e) {
+          console.error("Format data salah (arus):", e);
+        }
+      }
+
     });
 
     function kirimPerintah(nilai) {
@@ -158,3 +175,4 @@
   </script>
 </body>
 </html>
+
