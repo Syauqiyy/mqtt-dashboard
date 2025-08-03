@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MQTT Dashboard</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
   <style>
     body {
       font-family: sans-serif;
@@ -20,7 +21,7 @@
       border: 1px solid #ccc;
       padding: 20px;
       border-radius: 10px;
-      max-width: 600px;
+      max-width: 400px;
       width: 100%;
       margin: auto;
       box-sizing: border-box;
@@ -53,66 +54,109 @@
       background-color: #0056b3;
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 500px) {
       .btn {
         width: 100%;
         margin: 5px 0;
+        font-size: 1.1em;
+      }
+
+      .output {
+        font-size: 1.5em;
       }
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>MQTT Dashboard</h2>
-    <div class="output" id="sensorData">Loading...</div>
-    <button class="btn" onclick="sendCommand('L1')">Toggle Valve 1</button>
-    <button class="btn" onclick="sendCommand('L2')">Toggle Valve 2</button>
+    <h2>Dashboard SAWITBOT KAYUBI</h2>
+
+    <!-- 📏 Sensor Ultrasonik -->
+    <div>Jarak Ultrasonik:</div>
+    <div class="output" id="jarak">-- cm</div>
+
+    <!-- ⚖️ Load Cell -->
+    <div>Berat Bak Berondolan:</div>
+    <div class="output" id="berat">-- g</div>
+
+    <!-- 💡 Kontrol LED -->
+    <div style="text-align: center;">
+      <button class="btn" onclick="kirimPerintah('ON')">Nyalakan LED</button>
+      <button class="btn" onclick="kirimPerintah('OFF')">Matikan LED</button>
+    </div>
+
+    <!-- 🔌 Kontrol LED Tambahan -->
+    <div style="text-align: center;">
+      <h3>KONTROL LED (Toggle)</h3>
+      <button class="btn" id="led1Btn" onclick="toggleLED('LED1')">LED 1 OFF</button>
+      <button class="btn" id="led2Btn" onclick="toggleLED('LED2')">LED 2 OFF</button>
+    </div>
   </div>
 
   <script>
-    const clientId = "mqtt_dashboard_" + Math.random().toString(16).substr(2, 8);
-    const host = "wss://broker.emqx.io:8084/mqtt";
+    const broker = location.protocol === "https:" 
+      ? "wss://broker.emqx.io:8084/mqtt" 
+      : "ws://broker.emqx.io:8083/mqtt";
 
-    const options = {
-      keepalive: 60,
-      clientId: clientId,
-      protocolId: "MQTT",
-      protocolVersion: 4,
-      clean: true,
-      reconnectPeriod: 1000,
-      connectTimeout: 30 * 1000,
-      will: {
-        topic: "WillMsg",
-        payload: "Connection Closed abnormally..!",
-        qos: 0,
-        retain: false,
-      },
+    const topicSub = "poliban/sensor/ultrasonik";
+    const topicLoadCell = "poliban/sensor/loadcell";
+    const topicPub = "poliban/led/kontrol";
+
+    const client = mqtt.connect(broker);
+
+    client.on('connect', () => {
+      console.log("✅ Terhubung ke broker MQTT");
+
+      client.subscribe(topicSub, err => {
+        if (err) console.error("Gagal subscribe (ultrasonik):", err);
+      });
+
+      client.subscribe(topicLoadCell, err => {
+        if (err) console.error("Gagal subscribe (loadcell):", err);
+      });
+    });
+
+    client.on('message', (topic, message) => {
+      if (topic === topicSub) {
+        try {
+          const data = JSON.parse(message.toString());
+          document.getElementById("jarak").textContent = `${data.jarak.toFixed(2)} cm`;
+        } catch (e) {
+          console.error("Format data salah (ultrasonik):", e);
+        }
+      }
+      else if (topic === topicLoadCell) {
+        try {
+          const data = JSON.parse(message.toString());
+          document.getElementById("berat").textContent = `${data.berat} g`;
+        } catch (e) {
+          console.error("Format data salah (loadcell):", e);
+        }
+      }
+    });
+
+    function kirimPerintah(nilai) {
+      client.publish(topicPub, nilai);
+    }
+
+    let ledStates = {
+      LED1: false,
+      LED2: false
     };
 
-    console.log("Connecting mqtt client");
-    const client = mqtt.connect(host, options);
+    function toggleLED(led) {
+      ledStates[led] = !ledStates[led];
+      const status = ledStates[led] ? "ON" : "OFF";
 
-    client.on("error", function (err) {
-      console.log("Connection error: ", err);
-      client.end();
-    });
+      const payload = JSON.stringify({
+        led: led,
+        status: status
+      });
 
-    client.on("reconnect", function () {
-      console.log("Reconnecting...");
-    });
+      client.publish("esp32/led/group", payload);
 
-    client.on("connect", function () {
-      console.log("Client connected:" + clientId);
-      client.subscribe("sawitbot/ultrasonik");
-    });
-
-    client.on("message", function (topic, message, packet) {
-      console.log("Received '" + message + "' on '" + topic + "'");
-      document.getElementById("sensorData").innerText = message.toString() + " cm";
-    });
-
-    function sendCommand(command) {
-      client.publish("sawitbot/solenoid", command);
+      const btn = document.getElementById(led.toLowerCase() + "Btn");
+      btn.textContent = `${led} ${status}`;
     }
   </script>
 </body>
